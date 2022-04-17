@@ -1,0 +1,12 @@
+.robot {
+    display: block;
+    position: relative;
+}
+
+.blue {
+    background-image: url('../../imgs/blue_robot.svg');
+}
+
+.orange {
+    background-image: url('../../imgs/orange_robot.svg');
+}

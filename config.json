@@ -1,0 +1,9 @@
+{
+    "mqtt_host": "localhost",
+    "mqtt_port": 1883,
+    "cmd_name": "name",
+    "robot_name": "rname",
+    "zm_host": "82.146.32.180",
+    "zm_username": "app",
+    "zm_password": "9sm3lgRp75"
+}

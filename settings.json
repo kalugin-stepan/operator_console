@@ -1,0 +1,14 @@
+{
+    "primaryBindings": {
+        "forwardKey": "w",
+        "backKey": "s",
+        "leftKey": "a",
+        "rightKey": "d"
+    },
+    "secondaryBindings": {
+        "forwardKey": "ArrowUp",
+        "backKey": "ArrowDown",
+        "leftKey": "ArrowLeft",
+        "rightKey": "ArrowRight"
+    }
+}

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272 173">
+    <style>
+        circle {
+            stroke: white;
+            stroke-width: 2px;
+            fill-opacity: 0;
+        }
+    </style>
+    <rect width="272" height="173" fill="#6CC484"/>
+    <circle cx="136" cy="87" r="30"/>
+    <path d="M 136 0 L 136 173" stroke="white" stroke-width="2px"/>
+    <rect width="25" height="50" fill-opacity="0"
+    stroke="white" stroke-width="2px" x="-1" y="62"/>
+    <rect width="25" height="50" fill-opacity="0"
+    stroke="white" stroke-width="2px" x="248" y="62"/>
+</svg>
