@@ -1,4 +1,4 @@
-.login_form {
+.form {
     display: block;
     margin: 10px auto;
     padding: 15px;
@@ -7,12 +7,12 @@
     border-radius: 10px;
 }
 
-.login_form > div {
+.form > div {
     display: block;
     margin: 10px 20px 10px;
 }
 
-.login_form input {
+.form .form__input {
     font-size: 24px;
     border-width: 2px;
     border-left: 1px;
@@ -21,11 +21,11 @@
     border-color: rgba(0, 0, 0, 0.65);
 }
 
-.login_form input:focus {
+.form input:focus {
     outline: 0;
 }
 
-.login_form button {
+.form .form__button {
     font-size: 22px;
     color: white;
     display: block;
@@ -35,21 +35,21 @@
     background-color: #3D59AB;
 }
 
-.login_form button:hover {
+.form .form__button:hover {
     cursor: pointer;
     background-color: lightgray;
     color: black;
 }
 
-.login_form button:checked {
+.form .form__button:checked {
     cursor: crosshair;
 }
 
-.login_form h1 {
+.form h1 {
     text-align: center;
 }
 
-.login_form hr {
+.form .form__hr {
     border: none;
     color: rgba(0, 0, 0, 0.65);
     background-color: rgba(0, 0, 0, 0.65);

@@ -1,72 +1,72 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import Robot, { Team } from '../../components/Robot/Robot'
 import FootballField from '../../components/FootballField/FootballField'
-import DataBase from '../../helpers/Database'
 import ipcRenderer from '../../helpers/ipcRenderer'
 import Settings, { Bindings } from '../../models/Settings'
-import User from '../../models/User'
 import Player from './Player'
-import Vector from '../../models/Vector'
+import Vector from './Vector'
 import Controls from './Controls'
+import AuthContext from '../../helpers/AuthContext'
+import Prompt from '../../components/Prompt/Prompt'
 import './Index.css'
 
-async function getSettings() {
-    const settigns: Settings = JSON.parse(await ipcRenderer.invoke('settings'))
-    return settigns
-}
-
 function getFieldWidth() {
-    return document.body.offsetWidth*0.7
+    return document.body.offsetWidth*0.6
 }
-
-const primeryPos: Vector = {x: 0, y: 0}
-const secondaryPos: Vector = {x: 0, y: 0}
 
 function applySettings(controls: Controls, settings: Settings,
-    notifyPrimaryPosUpdate: () => void, notifySecondaryPosUpdate: () => void) {
+    notifyPrimaryPosUpdate: (pos: Vector) => void, notifySecondaryPosUpdate: (pos: Vector) => void) {
 
-    function pushControls(bindings: Bindings, pos: Vector, notify: () => void) {
+    const primeryVel: Vector = {x: 0, y: 0}
+    const secondaryVel: Vector = {x: 0, y: 0}
+
+    function pushControls(bindings: Bindings, vel: Vector, notify: (vel: Vector) => void) {
 
         function onYUp() {
-            pos.y = 0
-            notify()
+            vel.y = 0
+            notify(vel)
         }
 
         function onXUp() {
-            pos.x = 0
-            notify()
+            vel.x = 0
+            notify(vel)
         }
 
         controls.on(bindings.forwardKey, () => {
-            pos.y = 100
-            notify()
+            vel.y = 100
+            notify(vel)
         }, onYUp)
         controls.on(bindings.backKey, () => {
-            pos.y = -100
-            notify()
+            vel.y = -100
+            notify(vel)
         }, onYUp)
         controls.on(bindings.leftKey, () => {
-            pos.x = -100
-            notify()
+            vel.x = -100
+            notify(vel)
         }, onXUp)
         controls.on(bindings.rightKey, () => {
-            pos.x = 100
-            notify()
+            vel.x = 100
+            notify(vel)
         }, onXUp)
     }
 
-    pushControls(settings.primaryBindings, primeryPos, notifyPrimaryPosUpdate)
-    pushControls(settings.secondaryBindings, secondaryPos, notifySecondaryPosUpdate)
+    pushControls(settings.primaryBindings, primeryVel, notifyPrimaryPosUpdate)
+    pushControls(settings.secondaryBindings, secondaryVel, notifySecondaryPosUpdate)
 }
 
+let last_player_lenght = 0
+
 export default function Index() {
+    const [players, setPlayers] = useState<Player[]>([])
+    const [ownedPlayers, setOwnedPlayers] = useState<Player[]>([])
+    const [ownedPlayerIndex, setOwnedPlayerIndex] = useState<number>(0)
 
-    const [users, setUsers] = useState<User[]>(DataBase.users)
-    const [primaryUser, setPrimaryUser] = useState<User | undefined>(DataBase.users[0])
-    const [secondaryUser, setSecondaryUser] = useState<User | undefined>(DataBase.users[1])
+    const [isAddingPlayer, setIsAddingPlayer] = useState<boolean>(false)
 
-    const [players, setPlayers] = useState<Player[]>(DataBase.users.map(user => new Player(user, {x: 0, y: 0})))
+    const primaryOwnedPlayer = ownedPlayers.length > ownedPlayerIndex ? ownedPlayers[ownedPlayerIndex] : undefined
+    const secondaryOwnedPlayer = ownedPlayers.length > ownedPlayerIndex + 1 ? ownedPlayers[ownedPlayerIndex + 1] : 
+    ownedPlayerIndex - 1 >= 0 ? ownedPlayers[ownedPlayerIndex - 1] : undefined
 
     const [settings, setSettings] = useState<Settings>({
         primaryBindings: {
@@ -85,121 +85,117 @@ export default function Index() {
 
     const [fieldWidth, setFieldWidth] = useState<number>(getFieldWidth())
 
-    const k = fieldWidth/272
-
-    function setCurrentUsers(i: number) {
-        while (i >= DataBase.users.length) {
-            i--
-        }
-        setPrimaryUser(DataBase.users[i])
-        let j = i + 1;
-        if (j > DataBase.users.length) {
-            setSecondaryUser(DataBase.users[j])
-            return
-        }
-        j = i - 1;
-        if (j >= 0) {
-            setSecondaryUser(DataBase.users[j])
-            return
-        }
-        setSecondaryUser(undefined)
-    }
-
     useEffect(() => {
-
-        getSettings().then(settings => {
-            setSettings(settings)
-        })
-
-        ipcRenderer.on('pos', (e, id: string, data: string) => {
-            console.log(id)
-            console.log(data)
-            const pos: Vector = JSON.parse(data)
-
-            for (const player of players) {
-                if (player.user.id === id) {
-                    player.pos = pos
-                    setPlayers(players.map(player => player))
-                    console.log('y')
-                    return
-                }
-            }
-        })
-
-        ipcRenderer.on('switched', (e, i) => {
-            if (i == 0) {
-                setPrimaryUser(DataBase.users[9])
-                return
-            }
-            if (DataBase.users.length < i) return
-            setPrimaryUser(DataBase.users[i - 1])
-        })
-
-        function onWindowResize() {
+        function onResize(){
             setFieldWidth(getFieldWidth())
         }
 
-        document.body.onresize = onWindowResize
+        document.body.onresize = onResize
+
+        ipcRenderer.invoke('settings').then(settings => {
+            setSettings(settings)
+        })
 
         return () => {
-            ipcRenderer.removeAllListeners('switched')
-            document.body.removeEventListener('resize', onWindowResize)
+            document.body.removeEventListener('resize', onResize)
         }
     }, [])
 
     useEffect(() => {
+        ipcRenderer.on('pos', (e, player_id: number, robot_name: string, data: string) => {
+            const pos: Vector = JSON.parse(data)
+            console.log(player_id)
+            console.log(robot_name)
+            for (const player of players) {
+                console.log(player)
+                if (player.id === player_id && player.robot_name === robot_name) {
+                    player.pos = pos
+                    break
+                }
+            }
+            setPlayers([...players])
+        })
+
+        if (players.length !== last_player_lenght) {
+            last_player_lenght = players.length
+            ipcRenderer.send('players', players.map<{id: number, robot_name: string}>(player => {
+                return {id: player.id, robot_name: player.robot_name}
+            }))
+        }
+
+        return () => {ipcRenderer.removeAllListeners('pos')}
+    }, [players])
+
+    useEffect(() => {
         const controls = new Controls()
 
-        function onPrimaryPosChanged() {
-            ipcRenderer.send('joystick_move', primaryUser.id, JSON.stringify(primeryPos))
+        function onPrimaryPosUpdate(pos: Vector) {
+            if (primaryOwnedPlayer === undefined) return
+            ipcRenderer.send(
+                'vel_changed',
+                JSON.stringify({id: AuthContext.id, robot_name: primaryOwnedPlayer.robot_name, pos})
+            )
         }
 
-        function onSecondaryPosChanged() {
-            if (secondaryUser === undefined) return
-            ipcRenderer.send('joystick_move', secondaryUser.id, JSON.stringify(secondaryPos))
+        function onSecondaryPosUpdate(pos: Vector) {
+            if (secondaryOwnedPlayer === undefined) return
+            ipcRenderer.send(
+                'vel_changed',
+                JSON.stringify({id: AuthContext.id, robot_name: secondaryOwnedPlayer.robot_name, pos})
+            )
         }
 
-        applySettings(controls, settings, onPrimaryPosChanged, onSecondaryPosChanged)
-        return () => {
-            controls.stop()
-        }
-    }, [settings, primaryUser])
+        applySettings(controls, settings, onPrimaryPosUpdate, onSecondaryPosUpdate)
+        return () => {controls.stop()}
+    }, [settings, ownedPlayerIndex, ownedPlayers])
 
-    async function doLogout() {
-        const i = await DataBase.DeleteUser(primaryUser)
-        setUsers(DataBase.users)
-        setCurrentUsers(i)
-    }
+    const k = fieldWidth/272
 
-    users.forEach(user => {
-        console.log(user.id)
-    })
+    const addRobot = useCallback((robotName: string) => {
+        setIsAddingPlayer(false)
+        if (robotName === '') return
+        const player = new Player(AuthContext.id, {x: 0, y: 0}, robotName)
+        setOwnedPlayers([...ownedPlayers, player])
+        setPlayers([...players, player])
+    }, [players, ownedPlayers])
+
+    const doLogout = useCallback(() => {
+        AuthContext.Logout()
+        setOwnedPlayers([])
+    }, [])
 
     return (
         <div>
+            {isAddingPlayer ? <Prompt text='Input robot name.' button_text='Add'
+            placeholder_text='Robot name' on_button_click={robotName => addRobot(robotName)}/> : ''}
             <header className='header'>
                 <div className='users' style={{width: fieldWidth > 600 ? fieldWidth : 'auto'}}>
                     {
-                        users.map<ReactNode>((u, i) => {
-                            const className = u.username === primaryUser.username ? 'selected' : ''
+                        ownedPlayers.map<ReactNode>((player, i) => {
+                            const className = player === primaryOwnedPlayer ? 'selected' : ''
 
-                            return <button className={className} key={i} onClick={() => setCurrentUsers(i)}>{u.username}</button>
+                            return (
+                                <button className={className}
+                                key={player.robot_name}
+                                onClick={() => setOwnedPlayerIndex(i)}>{player.robot_name}</button>
+                            )
                         })
                     }
                 </div>
             </header>
             <FootballField width={fieldWidth}>
                 {
-                    players.map(player => 
-                        <Robot key={player.user.id} size={fieldWidth/20} team={Team.blue} pos={player.pos} k={k}/>
+                    players.map(player =>
+                        <Robot key={player.robot_name} size={fieldWidth/20} team={Team.blue} pos={player.pos} k={k}/>
                     )
                 }
             </FootballField>
             <div className='bottom_menu'>
+                <button onClick={() => setIsAddingPlayer(true)}>Add player</button>
                 <Link to='/login'>Login</Link>
                 <button onClick={doLogout}>Logout</button>
             </div>
-            {users.length === 0 ? <Navigate replace to='/login'/> : ''}
+            {AuthContext.id === null ? <Navigate replace to='/login'/> : ''}
         </div>
     )
 }

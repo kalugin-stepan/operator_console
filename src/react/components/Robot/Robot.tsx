@@ -1,4 +1,4 @@
-import Vector from '../../models/Vector'
+import Vector from '../../pages/Index/Vector'
 import './Robot.css'
 
 enum Team {

@@ -1,11 +1,12 @@
-import User from '../../models/User'
-import Vector from '../../models/Vector'
+import Vector from './Vector'
 
 class Player {
-    readonly user: User
+    readonly robot_name: string
+    readonly id: number
     pos: Vector
-    constructor(user: User, pos: Vector) {
-        this.user = user
+    constructor(id: number, pos: Vector, robot_name: string) {
+        this.id = id
+        this.robot_name = robot_name
         this.pos = pos
     }
 }

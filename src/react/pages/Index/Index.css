@@ -45,9 +45,8 @@
 
 .bottom_menu {
     display: flex;
-    width: min-content;
     margin: auto;
-    max-width: 768px;
+    justify-content: center;
 }
 
 .bottom_menu > * {

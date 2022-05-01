@@ -71,7 +71,6 @@
     "@electron-forge/plugin-webpack": "6.0.0-beta.63",
     "@types/react": "^17.0.43",
     "@types/react-dom": "^17.0.14",
-    "@types/uuid": "^8.3.4",
     "@vercel/webpack-asset-relocator-loader": "1.7.0",
     "css-loader": "^6.0.0",
     "electron": "18.0.1",
@@ -84,8 +83,10 @@
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
     "mqtt": "^4.3.7",
+    "node-fetch": "^3.2.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+    "react-fade-in": "^2.0.1",
     "react-joystick-component": "^4.0.0",
     "react-router-dom": "^6.3.0",
     "stdio": "^2.1.1",

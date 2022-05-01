@@ -1,6 +1,6 @@
 .robot {
     display: block;
-    position: relative;
+    position: absolute;
 }
 
 .blue {

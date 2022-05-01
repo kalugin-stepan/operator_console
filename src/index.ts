@@ -2,8 +2,8 @@ import electron, { ipcMain } from 'electron'
 import ElectronApp from './electronApp'
 import path from 'path'
 import fs from 'fs'
-import mqtt, { Client, MqttClient } from 'mqtt'
-import { v4 as uuid } from 'uuid'
+import mqtt, { MqttClient } from 'mqtt'
+import fetch, { Response } from 'node-fetch'
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string
@@ -14,54 +14,100 @@ const root = electron.app.getAppPath()
 
 const config = JSON.parse(fs.readFileSync(path.join(root, 'config.json'), 'utf-8'))
 
-const settings = fs.readFileSync(path.join(root, 'settings.json'), 'utf-8')
+const settings = JSON.parse(fs.readFileSync(path.join(root, 'settings.json'), 'utf-8'))
 
-const mqtt_clients: Map<string, MqttClient | undefined> = new Map()
-
-ipcMain.on('joystick_move', (e, id: string, data: string) => {
-    const client = mqtt_clients.get(id)
-    if (client === undefined) return
-    client.publish(id, data)
-})
+let client: MqttClient | null = null
 
 ipcMain.handle('settings', () => {
     return settings
 })
 
-interface User {
-    id: string
-    username: string
-    password: string
+let players: Player[] = []
+
+function updatePlayers(new_players: Player[]) {
+    players.forEach(player => {
+        client.unsubscribe(`${player.id}/${player.robot_name}`)
+    })
+    players = new_players
+    players.forEach(player => {
+        client.subscribe(`${player.id}/${player.robot_name}`)
+    })
 }
 
-ipcMain.on('connect', (e, data) => {
-    const user: User = JSON.parse(data)
-    user.id = uuid()
-    fs.writeFileSync('data.txt', user.id)
-    const client = mqtt.connect(
-        `mqtt://${config.mqtt_host}:${config.mqtt_port}`
-    )
-    mqtt_clients.set(user.id, client)
+interface Player {
+    id: number
+    robot_name: string
+}
 
-    client.subscribe(user.id)
+ipcMain.on('login', async (e, user: {username: string, password: string}) => {
 
-    client.on('message', (topic, data, pack) => {
-        app.send('pos', user.id, data.toString('utf-8'))
-    })
+    const fetchData = new URLSearchParams()
 
-    client.on('connect', () => {
-        app.send('connection_response', user.id)
-    })
+    fetchData.append('username', user.username)
+    fetchData.append('password', user.password)
 
-    function on_disconnect() {
-        app.send('connection_response', '')
-        client.end()
-        mqtt_clients.delete(user.id)
+    let res: Response | undefined = undefined
+
+    try {
+        res = await fetch(`${config.api_origin}/api/login`, {method: 'POST', body: fetchData})
+    } catch {}
+
+    if (!res) {
+        app.send('login_responce', 'API server is not available.')
+        return
     }
 
-    client.on('error', on_disconnect)
-    client.on('disconnect', on_disconnect)
-    client.on('close', on_disconnect)
+    if (!res.ok) {
+        app.send('login_responce', 'invalid username or password.')
+        return
+    }
+
+    app.send('login_responce', parseInt(await res.text()))
+
+    // app.send('login_responce', Math.round(Math.random() * 100))
+
+    client = mqtt.connect(`mqtt://${config.mqtt_host}:${config.mqtt_port}`)
+
+    client.on('message', (topic, data) => {
+        try {
+            const [player_id, robot_name] = topic.split('/')
+            app.send('pos', parseInt(player_id), robot_name, data.toString('utf-8'))
+        } catch {}
+    })
+})
+
+ipcMain.on('register', async (e, username: string, password: string) => {
+    const fetchData = new URLSearchParams()
+
+    fetchData.append('username', username)
+    fetchData.append('password', password)
+
+    let res: Response | undefined = undefined
+
+    try {
+        res = await fetch(`${config.api_origin}/api/register`, {method: 'POST', body: fetchData})
+    } catch {}
+
+    if (!res) {
+        app.send('register_responce', 'API server is not available.')
+        return
+    }
+
+    app.send('register_responce', !res.ok ? await res.text() : '')
+})
+
+ipcMain.on('logout', (e) => {
+    client.end()
+    client = null
+    players = []
+})
+
+ipcMain.on('vel_changed', (e, data: string) => {
+    client.publish('vel', data)
+})
+
+ipcMain.on('players', (e, players: Player[]) => {
+    updatePlayers(players)
 })
 
 for (let i = 0; i <= 9; i++) {
