@@ -1,5 +1,5 @@
 {
-    "mqtt_host": "localhost",
+    "mqtt_host": "broker.hivemq.com",
     "mqtt_port": 1883,
-    "api_origin": "http://localhost:5213"
+    "api_origin": "http://localhost:5000"
 }

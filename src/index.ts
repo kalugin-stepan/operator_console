@@ -52,7 +52,7 @@ ipcMain.on('login', async (e, user: {username: string, password: string}) => {
         res = await fetch(`${config.api_origin}/api/login`, {method: 'POST', body: fetchData})
     } catch {}
 
-    if (!res) {
+    if (res === undefined) {
         app.send('login_responce', 'API server is not available.')
         return
     }
@@ -67,6 +67,8 @@ ipcMain.on('login', async (e, user: {username: string, password: string}) => {
     // app.send('login_responce', Math.round(Math.random() * 100))
 
     client = mqtt.connect(`mqtt://${config.mqtt_host}:${config.mqtt_port}`)
+
+    client.subscribe('#/#')
 
     client.on('message', (topic, data) => {
         try {
@@ -88,12 +90,16 @@ ipcMain.on('register', async (e, username: string, password: string) => {
         res = await fetch(`${config.api_origin}/api/register`, {method: 'POST', body: fetchData})
     } catch {}
 
-    if (!res) {
+    if (res === undefined) {
         app.send('register_responce', 'API server is not available.')
         return
     }
 
-    app.send('register_responce', !res.ok ? await res.text() : '')
+    if (!res.ok) {
+        app.send('register_responce', await res.text())
+        return
+    }
+    app.send('register_responce', parseInt(await res.text()));
 })
 
 ipcMain.on('logout', (e) => {
@@ -103,6 +109,7 @@ ipcMain.on('logout', (e) => {
 })
 
 ipcMain.on('vel_changed', (e, data: string) => {
+    console.log(data)
     client.publish('vel', data)
 })
 

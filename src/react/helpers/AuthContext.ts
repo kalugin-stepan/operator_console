@@ -17,10 +17,10 @@ class AuthContext {
             })
         })
     }
-    static async Register(username: string, password: string): Promise<string> {
+    static async Register(username: string, password: string): Promise<string | number> {
         ipcRenderer.send('register', username, password)
-        return new Promise<string>((res, rej) => {
-            ipcRenderer.once('register_responce', (e, data) => {
+        return new Promise<string | number>((res, rej) => {
+            ipcRenderer.once('register_responce', (e, data: string) => {
                 res(data)
             })
         })

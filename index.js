@@ -1,16 +1,16 @@
 const mqtt = require('mqtt')
 const stdio = require('stdio')
 
-const client = mqtt.connect('mqtt://localhost:1883')
+const client = mqtt.connect('mqtt://broker.hivemq.com:1883')
 
-client.subscribe('#')
+client.subscribe('vel')
 
 client.on('connect', () => {
     console.log('conn')
 })
 
 client.on('message', (topic, data, pack) => {
-    console.log(`${topic}: ${data.toString('utf-8')}`)
+    console.log(data.toString('utf-8'))
 })
 
 async function test() {
@@ -23,7 +23,7 @@ async function test() {
         client.publish(topic, JSON.stringify(pos))
         pos.x--
         pos.y--
-    }, 2)
+    }, 5)
 }
 
 test()

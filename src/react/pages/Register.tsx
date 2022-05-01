@@ -13,11 +13,11 @@ export default function Register() {
 
     async function doRegister() {
         const rez = await AuthContext.Register(username.current.value, password.current.value)
-        if (rez === '') {
+        if (typeof rez === 'number') {
             setIsRegistered(true)
             return
         }
-        console.error(rez)
+        setErrorMessage(rez)
         password.current.value = ''
     }
 
@@ -37,7 +37,7 @@ export default function Register() {
                 <input className='form__input' placeholder='Password' type='password' ref={password}/>
             </div>
             <div>
-                <button className='form__button' onClick={doRegister}>Register</button>
+                <button type='button' className='form__button' onClick={doRegister}>Register</button>
             </div>
             {isRegistered ? <Navigate replace to='/'/> : ''}
             <Link replace to='/login'>Login</Link>
